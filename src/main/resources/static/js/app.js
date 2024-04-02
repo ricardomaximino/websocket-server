@@ -7,6 +7,7 @@ var messageForm = document.querySelector('#messageForm');
 var messageInput = document.querySelector('#message');
 var messageArea = document.querySelector('#messageArea');
 var connectingElement = document.querySelector('.connecting');
+var userList = document.querySelector('#userList')
 
 var stompClient = null;
 var username = null;
@@ -35,6 +36,7 @@ function connect(event) {
 function onConnected() {
     // Subscribe to the Public Topic
     stompClient.subscribe('/topic/chat', onMessageReceived);
+    stompClient.subscribe('/queue/Ricardo/queue/chat', onMessageReceived);
 
     // Tell your username to the server
     stompClient.send("/app/chat/addUser",
@@ -53,14 +55,18 @@ function onError(error) {
 
 
 function sendMessage(event) {
+     var buttonElement = document.createElement('button')
+            buttonElement.id = 'Ricardo';
+            userList.appendChild(buttonElement);
     var messageContent = messageInput.value.trim();
     if(messageContent && stompClient) {
         var chatMessage = {
             sender: username,
+            receiver: 'Ricardo',
             content: messageInput.value,
             type: 'CHAT'
         };
-        stompClient.send("/app/chat/public/sendMessage", {}, JSON.stringify(chatMessage));
+        stompClient.send("/app/chat/private/sendMessage", {}, JSON.stringify(chatMessage));
         messageInput.value = '';
     }
     event.preventDefault();
@@ -75,6 +81,9 @@ function onMessageReceived(payload) {
     if(message.type === 'JOIN') {
         messageElement.classList.add('event-message');
         message.content = message.sender + ' joined!';
+        var buttonElement = document.createElement('button')
+        buttonElement.id = message.sender
+        userList.appendChild(buttonElement);
     } else if (message.type === 'LEAVE') {
         messageElement.classList.add('event-message');
         message.content = message.sender + ' left!';
@@ -114,5 +123,14 @@ function getAvatarColor(messageSender) {
     return colors[index];
 }
 
+function addUser(event) {
+var count = 0;
+var buttonElement = document.createElement('button')
+            buttonElement.id = 'Ricardo' + count;
+            buttonElement.label = 'Ricardo ' + count;
+            userList.appendChild(buttonElement);
+}
+
 usernameForm.addEventListener('submit', connect, true)
 messageForm.addEventListener('submit', sendMessage, true)
+document.querySelector('#user').addEventListener('click', addUser, true)

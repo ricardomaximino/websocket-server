@@ -29,6 +29,13 @@ public class PublicChatController {
         return chatMessageMapper.mapToChatMessage(chatMessageEntity);
     }
 
+    @MessageMapping("/chat/private/sendMessage")
+    public void privateChat(@Payload ChatMessage chatMessage) {
+        chatMessage.setContent(chatMessage.getContent() + " private");
+        var chatMessageEntity = chatMessageRepository.save(chatMessageMapper.mapToChatMessageEntity(chatMessage));
+        simpMessageSendingOperations.convertAndSendToUser(chatMessage.getReceiver(),"/queue/chat", chatMessageMapper.mapToChatMessage(chatMessageEntity));
+    }
+
     @MessageMapping("/chat/addUser")
     @SendTo("/topic/chat")
     ChatMessage addUser(@Payload ChatMessage chatMessage, @Header("simpSessionId") String sessionId,
