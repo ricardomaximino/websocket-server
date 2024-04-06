@@ -16,6 +16,49 @@ var colors = [
     '#ffc107', '#ff85af', '#FF9800', '#39bbb0'
 ];
 
+const chats = new Map();
+
+class Chat {
+
+    constructor(name, messages) {
+        this.online = true;
+        this.lastSeen = new Date();
+        this.messages = messages;
+        this.name = name;
+    }
+
+    addMessage(message){
+        this.messages.push(message);
+        this.update();
+    }
+
+    addAllMessages(messages) {
+        messages.foreach((message) => this.messages.push(message));
+        update();
+    }
+
+    update() {
+        this.lastSeen = new Date();
+    }
+
+    getName() {
+        return this.name;
+    }
+
+    isOnline() {
+        return this.online;
+    }
+
+    setOffline() {
+        this.online = false;
+    }
+
+    setOnline() {
+        this.online = true;
+        this.update();
+    }
+}
+
 function connect(event) {
     username = document.querySelector('#name').value.trim();
 
@@ -55,7 +98,7 @@ function onError(error) {
 function sendMessage(event) {
     var messageContent = messageInput.value.trim();
     if(messageContent && stompClient) {
-        var chatMessage = {
+        let chatMessage = {
             sender: username,
             content: messageInput.value,
             type: 'CHAT'
@@ -68,39 +111,71 @@ function sendMessage(event) {
 
 
 function onMessageReceived(payload) {
-    var message = JSON.parse(payload.body);
-
-    var messageElement = document.createElement('li');
+    let chat;
+    let message = JSON.parse(payload.body)
 
     if(message.type === 'JOIN') {
-        messageElement.classList.add('event-message');
-        message.content = message.sender + ' joined!';
+        createOrUpdateChatWithName(message.sender)
+        drawConnectionNotification(message.sender, 'joined!')
     } else if (message.type === 'LEAVE') {
-        messageElement.classList.add('event-message');
-        message.content = message.sender + ' left!';
-    } else {
-        messageElement.classList.add('chat-message');
-
-        var avatarElement = document.createElement('i');
-        var avatarText = document.createTextNode(message.sender[0]);
-        avatarElement.appendChild(avatarText);
-        avatarElement.style['background-color'] = getAvatarColor(message.sender);
-
-        messageElement.appendChild(avatarElement);
-
-        var usernameElement = document.createElement('span');
-        var usernameText = document.createTextNode(message.sender);
-        usernameElement.appendChild(usernameText);
-        messageElement.appendChild(usernameElement);
+        chat = chats.get(message.sender);
+        chat.setOffline();
+        drawConnectionNotification(message.sender, 'left!')
+    } else if (message.type === 'CHAT') {
+        createOrUpdateChatWithMessage(message);
+        drawMessage(message);
     }
+}
 
-    var textElement = document.createElement('p');
-    var messageText = document.createTextNode(message.content);
+function createOrUpdateChatWithName(name) {
+    let chat = chats.get(name);
+    if (chat == undefined) {
+        chat = new Chat(name, [])
+        chats.set(chat.getName(), chat)
+    } else {
+        chat.setOnline();
+    }
+}
+
+function createOrUpdateChatWithMessage(message) {
+    let chat = chats.get(message.sender);
+    if (chat == undefined) {
+        chat = new Chat(message.sender, [message])
+        chats.set(chat.getName(), chat)
+    } else {
+        chat.addMessage(message);
+    }
+}
+
+function drawConnectionNotification(name, notification) {
+    let messageElement = document.createElement('li');
+    messageElement.classList.add('event-message');
+    commonDrawMessage(name + ' ' + notification, messageElement);
+}
+
+function drawMessage(message) {
+    let messageElement = document.createElement('li');
+    let avatarElement = document.createElement('i');
+    let avatarText = document.createTextNode(message.sender[0]);
+    avatarElement.appendChild(avatarText);
+    avatarElement.style['background-color'] = getAvatarColor(message.sender);
+
+    messageElement.appendChild(avatarElement);
+
+    let usernameElement = document.createElement('span');
+    let usernameText = document.createTextNode(message.sender);
+    usernameElement.appendChild(usernameText);
+    messageElement.appendChild(usernameElement);
+    messageElement.classList.add('chat-message');
+    commonDrawMessage(message.content, messageElement);
+}
+
+function commonDrawMessage(text, listItemElement) {
+    let textElement = document.createElement('p');
+    let messageText = document.createTextNode(text);
     textElement.appendChild(messageText);
-
-    messageElement.appendChild(textElement);
-
-    messageArea.appendChild(messageElement);
+    listItemElement.appendChild(textElement);
+    messageArea.appendChild(listItemElement);
     messageArea.scrollTop = messageArea.scrollHeight;
 }
 

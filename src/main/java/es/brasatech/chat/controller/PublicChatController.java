@@ -13,6 +13,7 @@ import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 @AllArgsConstructor
@@ -21,6 +22,11 @@ public class PublicChatController {
     private final ChatMessageMapper chatMessageMapper;
     private final UserService userService;
     private final SimpMessageSendingOperations simpMessageSendingOperations;
+
+    @GetMapping("/chat")
+    public String chat() {
+        return "chat";
+    }
 
     @MessageMapping("/chat/public/sendMessage")
     @SendTo("/topic/chat")
