@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 @AllArgsConstructor
 public class PublicChatController {
+    public static final String PUBLIC_CHAT = "all";
     private final ChatMessageRepository chatMessageRepository;
     private final ChatMessageMapper chatMessageMapper;
     private final UserService userService;
@@ -31,8 +32,19 @@ public class PublicChatController {
     @MessageMapping("/chat/public/sendMessage")
     @SendTo("/topic/chat")
     public ChatMessage publicChat(@Payload ChatMessage chatMessage) {
+        chatMessage.setReceiver(PUBLIC_CHAT);
         var chatMessageEntity = chatMessageRepository.save(chatMessageMapper.mapToChatMessageEntity(chatMessage));
         return chatMessageMapper.mapToChatMessage(chatMessageEntity);
+    }
+
+    @MessageMapping("/chat/private/sendMessage")
+    public void privateChat(@Payload ChatMessage chatMessage) {
+        chatMessage.setContent(chatMessage.getContent() + " private");
+        var chatMessageEntity = chatMessageRepository.save(chatMessageMapper.mapToChatMessageEntity(chatMessage));
+        simpMessageSendingOperations.convertAndSendToUser(
+                chatMessage.getReceiver(),
+                "/queue/chat",
+                chatMessageMapper.mapToChatMessage(chatMessageEntity));
     }
 
     @MessageMapping("/chat/addUser")
