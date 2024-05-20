@@ -38,14 +38,35 @@
         <ul id="messageArea">
 
         </ul>
-        <form id="messageForm" name="messageForm">
-            <div class="form-group">
-                <div class="input-group clearfix">
-                    <input type="text" id="message" placeholder="Type a message..." autocomplete="off" class="form-control"/>
-                    <button type="submit" class="primary">Send</button>
+        <div class="row">
+            <form id="publicMessageForm" name="publicMessageForm">
+                <div class="form-group">
+                    <div class="input-group clearfix">
+                        <input type="text" id="publicMessage" placeholder="Type a message..." autocomplete="off" class="form-control"/>
+                        <button type="submit" class="primary">Send</button>
+                    </div>
                 </div>
-            </div>
-        </form>
+            </form>
+            <br/>
+            <form id="privateMessageForm" name="privateMessageForm">
+                <div class="form-group">
+                    <div class="input-group clearfix">
+                        <input type="text" id="privateReceiver" placeholder="Type the receiver's name..." autocomplete="off" class="form-control"/>
+                        <input type="text" id="privateMessage" placeholder="Type a message..." autocomplete="off" class="form-control"/>
+                        <button type="submit" class="primary">Send Private</button>
+                    </div>
+                </div>
+            </form>
+            <br/>
+            <form id="meMessageForm" name="meMessageForm">
+                <div class="form-group">
+                    <div class="input-group clearfix">
+                        <input type="text" id="meMessage" placeholder="Type a message..." autocomplete="off" class="form-control"/>
+                        <button type="submit" class="primary">Send to me only</button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 

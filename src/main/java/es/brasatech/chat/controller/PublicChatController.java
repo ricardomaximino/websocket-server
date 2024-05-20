@@ -12,8 +12,15 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
+import org.springframework.messaging.simp.annotation.SendToUser;
+import org.springframework.messaging.simp.user.UserDestinationMessageHandler;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.bind.annotation.GetMapping;
+
+import java.security.Principal;
+import java.util.Map;
+import java.util.UUID;
 
 @Controller
 @AllArgsConstructor
@@ -38,13 +45,29 @@ public class PublicChatController {
     }
 
     @MessageMapping("/chat/private/sendMessage")
-    public void privateChat(@Payload ChatMessage chatMessage) {
-        chatMessage.setContent(chatMessage.getContent() + " private");
+    public void privateChat(@Payload ChatMessage chatMessage, SimpMessageHeaderAccessor simpMessageHeaderAccessor) {
+        chatMessage.setContent("Private: " + chatMessage.getContent());
         var chatMessageEntity = chatMessageRepository.save(chatMessageMapper.mapToChatMessageEntity(chatMessage));
+        var sessionList = userService.getUserSessions(chatMessage.getReceiver());
+        sessionList.forEach(receiverSession -> {
+        SimpMessageHeaderAccessor accessor = SimpMessageHeaderAccessor.create();
+        accessor.setSessionId(receiverSession);
+	    accessor.setLeaveMutable(false);
         simpMessageSendingOperations.convertAndSendToUser(
-                chatMessage.getReceiver(),
+                receiverSession,
                 "/queue/chat",
-                chatMessageMapper.mapToChatMessage(chatMessageEntity));
+                chatMessageMapper.mapToChatMessage(chatMessageEntity),
+                accessor.getMessageHeaders());
+            }
+        );
+    }
+
+    @MessageMapping("/chat/me/sendMessage")
+    @SendToUser("/queue/chat")
+    public ChatMessage meChat(@Payload ChatMessage chatMessage, SimpMessageHeaderAccessor simpMessageHeaderAccessor) {
+        chatMessage.setContent(chatMessage.getContent() + " me");
+        var chatMessageEntity = chatMessageRepository.save(chatMessageMapper.mapToChatMessageEntity(chatMessage));
+        return chatMessage;
     }
 
     @MessageMapping("/chat/addUser")
@@ -52,7 +75,9 @@ public class PublicChatController {
     ChatMessage addUser(@Payload ChatMessage chatMessage, @Header("simpSessionId") String sessionId,
                         SimpMessageHeaderAccessor simpMessageHeaderAccessor) {
         userService.addUser(new User(chatMessage.getSender(), sessionId));
+        String id = UUID.randomUUID().toString();
         simpMessageHeaderAccessor.getSessionAttributes().put("username", chatMessage.getSender());
+        simpMessageHeaderAccessor.getSessionAttributes().put("userId",id);
         return chatMessage;
     }
 }
