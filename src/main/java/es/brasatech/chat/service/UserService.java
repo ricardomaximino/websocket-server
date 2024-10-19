@@ -2,6 +2,7 @@ package es.brasatech.chat.service;
 
 import es.brasatech.chat.domain.User;
 
+import java.util.List;
 import java.util.Set;
 
 public interface UserService {
@@ -12,4 +13,5 @@ public interface UserService {
     String addUser(User user);
     void remove(User user);
     int countOnlineUsers();
+    List<User> getAllUsers();
 }

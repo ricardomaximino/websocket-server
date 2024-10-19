@@ -4,10 +4,7 @@ import es.brasatech.chat.domain.User;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Service
 @Log4j2
@@ -65,5 +62,10 @@ public class UserServiceImpl implements UserService {
     @Override
     public int countOnlineUsers() {
         return sessionMap.size();
+    }
+
+    @Override
+    public List<User> getAllUsers() {
+        return sessionMap.values().stream().toList();
     }
 }

@@ -10,6 +10,7 @@ import java.util.UUID;
 public class User {
     private String id;
     private String name;
+    private Status status;
     private Set<String> openSessions = new HashSet<>();
 
     public User(String name, String openSession) {

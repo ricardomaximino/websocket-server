@@ -9,8 +9,12 @@ var messageArea = document.querySelector('#messageArea');
 var connectingElement = document.querySelector('.connecting');
 var userList = document.querySelector('#userList')
 
-var stompClient = null;
-var username = null;
+let stompClient = null;
+let username = null;
+let selectedUser = null;
+const connectedUserList = new Set();
+const onlyChatMessage = true;
+
 
 var colors = [
     '#2196F3', '#32c787', '#00BCD4', '#ff5652',
@@ -19,12 +23,13 @@ var colors = [
 
 function connect(event) {
     username = document.querySelector('#name').value.trim();
+    console.log("Connected user: "  + username);
 
     if(username) {
         usernamePage.classList.add('hidden');
         chatPage.classList.remove('hidden');
 
-        var socket = new SockJS('/ws');
+        const socket = new SockJS('/ws');
         stompClient = Stomp.over(socket);
 
         stompClient.connect({}, onConnected, onError);
@@ -36,7 +41,7 @@ function connect(event) {
 function onConnected() {
     // Subscribe to the Public Topic
     stompClient.subscribe('/topic/chat', onMessageReceived);
-    stompClient.subscribe('/queue/Ricardo/queue/chat', onMessageReceived);
+    stompClient.subscribe('/queue/' + username + '/private/message', onMessageReceived);
 
     // Tell your username to the server
     stompClient.send("/app/chat/addUser",
@@ -45,8 +50,14 @@ function onConnected() {
     )
 
     connectingElement.classList.add('hidden');
+    fetchAndDisplayConnectedUsers();
 }
 
+async function fetchAndDisplayConnectedUsers() {
+    const connectedUserResponse = await fetch('/api/user');
+    let users = await connectedUserResponse.json();
+    addAllUsers(users);
+}
 
 function onError(error) {
     connectingElement.textContent = 'Could not connect to WebSocket server. Please refresh this page to try again!';
@@ -55,14 +66,34 @@ function onError(error) {
 
 
 function sendMessage(event) {
-     var buttonElement = document.createElement('button')
-            buttonElement.id = 'Ricardo';
-            userList.appendChild(buttonElement);
+    if(selectedUser == null || selectedUser === "ALL"){
+        sendPublicMessage(event);
+    } else {
+        sendPrivateMessage(event);
+    }
+}
+
+function sendPublicMessage(event) {
     var messageContent = messageInput.value.trim();
     if(messageContent && stompClient) {
         var chatMessage = {
             sender: username,
-            receiver: 'Ricardo',
+            receiver: selectedUser,
+            content: messageInput.value,
+            type: 'CHAT'
+        };
+        stompClient.send("/app/chat/public/sendMessage", {}, JSON.stringify(chatMessage));
+        messageInput.value = '';
+    }
+    event.preventDefault();
+}
+
+function sendPrivateMessage(event) {
+    var messageContent = messageInput.value.trim();
+    if(messageContent && stompClient) {
+        var chatMessage = {
+            sender: username,
+            receiver: selectedUser,
             content: messageInput.value,
             type: 'CHAT'
         };
@@ -81,13 +112,12 @@ function onMessageReceived(payload) {
     if(message.type === 'JOIN') {
         messageElement.classList.add('event-message');
         message.content = message.sender + ' joined!';
-        var buttonElement = document.createElement('button')
-        buttonElement.id = message.sender
-        userList.appendChild(buttonElement);
+        addUser(message.sender);
     } else if (message.type === 'LEAVE') {
         messageElement.classList.add('event-message');
         message.content = message.sender + ' left!';
-    } else {
+        removeUser(message.sender);
+    } else if (message.type === 'CHAT'){
         messageElement.classList.add('chat-message');
 
         var avatarElement = document.createElement('i');
@@ -101,6 +131,8 @@ function onMessageReceived(payload) {
         var usernameText = document.createTextNode(message.sender);
         usernameElement.appendChild(usernameText);
         messageElement.appendChild(usernameElement);
+    } else {
+        alert(message.type + " is an unsupported message type")
     }
 
     var textElement = document.createElement('p');
@@ -109,8 +141,10 @@ function onMessageReceived(payload) {
 
     messageElement.appendChild(textElement);
 
-    messageArea.appendChild(messageElement);
-    messageArea.scrollTop = messageArea.scrollHeight;
+    if(!onlyChatMessage || message.type === 'CHAT') {
+        messageArea.appendChild(messageElement);
+        messageArea.scrollTop = messageArea.scrollHeight;
+    }
 }
 
 
@@ -123,14 +157,51 @@ function getAvatarColor(messageSender) {
     return colors[index];
 }
 
-function addUser(event) {
-var count = 0;
-var buttonElement = document.createElement('button')
-            buttonElement.id = 'Ricardo' + count;
-            buttonElement.label = 'Ricardo ' + count;
-            userList.appendChild(buttonElement);
+function addAllUsers(users) {
+    while (userList.firstChild) {
+        userList.removeChild(userList.firstChild);
+    }
+
+    let buttonElement = document.createElement('button')
+    buttonElement.id = 'ALL';
+    buttonElement.innerHTML = 'ALL';
+    buttonElement.addEventListener('click', selectUser, true)
+    userList.appendChild(buttonElement);
+
+    for(let user of users){
+        connectedUserList.add(user)
+        let buttonElement = document.createElement('button')
+        buttonElement.id = user;
+        buttonElement.innerHTML = user;
+        buttonElement.addEventListener('click', selectUser, true)
+        userList.appendChild(buttonElement);
+    }
+    console.log("Adding all users ", users);
+}
+
+function addUser(user) {
+    if (!connectedUserList.has(user)){
+        connectedUserList.add(user);
+        let buttonElement = document.createElement('button');
+        buttonElement.id = user;
+        buttonElement.innerHTML = user;
+        buttonElement.addEventListener('click', selectUser, true);
+        userList.appendChild(buttonElement);
+        console.log("Adding user ", user);
+    }
+}
+
+function removeUser(user) {
+    const element = document.getElementById(user);
+    userList.removeChild(element.remove());
+    console.log("Removing user ", user);
+}
+
+function selectUser(event) {
+    selectedUser = event.target.id;
+    console.log('User ' + selectedUser + ' is selected.');
 }
 
 usernameForm.addEventListener('submit', connect, true)
 messageForm.addEventListener('submit', sendMessage, true)
-document.querySelector('#user').addEventListener('click', addUser, true)
+

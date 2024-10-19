@@ -16,7 +16,7 @@ import org.springframework.stereotype.Controller;
 
 @Controller
 @AllArgsConstructor
-public class PublicChatController {
+public class ChatController {
     private final ChatMessageRepository chatMessageRepository;
     private final ChatMessageMapper chatMessageMapper;
     private final UserService userService;
@@ -33,7 +33,10 @@ public class PublicChatController {
     public void privateChat(@Payload ChatMessage chatMessage) {
         chatMessage.setContent(chatMessage.getContent() + " private");
         var chatMessageEntity = chatMessageRepository.save(chatMessageMapper.mapToChatMessageEntity(chatMessage));
-        simpMessageSendingOperations.convertAndSendToUser(chatMessage.getReceiver(),"/queue/chat", chatMessageMapper.mapToChatMessage(chatMessageEntity));
+        simpMessageSendingOperations.convertAndSendToUser(
+            chatMessage.getReceiver(),
+            "/private/message",
+            chatMessageMapper.mapToChatMessage(chatMessageEntity));
     }
 
     @MessageMapping("/chat/addUser")
@@ -41,7 +44,12 @@ public class PublicChatController {
     ChatMessage addUser(@Payload ChatMessage chatMessage, @Header("simpSessionId") String sessionId,
                         SimpMessageHeaderAccessor simpMessageHeaderAccessor) {
         userService.addUser(new User(chatMessage.getSender(), sessionId));
-        simpMessageHeaderAccessor.getSessionAttributes().put("username", chatMessage.getSender());
+        if(simpMessageHeaderAccessor != null) {
+            var map = simpMessageHeaderAccessor.getSessionAttributes();
+            if(map != null) {
+                map.put("username", chatMessage.getSender());
+            }
+        }
         return chatMessage;
     }
 }
