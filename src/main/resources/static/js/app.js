@@ -26,6 +26,7 @@ function connect(event) {
     console.log("Connected user: "  + username);
 
     if(username) {
+        document.querySelector('#titleSpan').innerText = username;
         usernamePage.classList.add('hidden');
         chatPage.classList.remove('hidden');
 

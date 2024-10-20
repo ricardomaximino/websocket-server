@@ -9,7 +9,7 @@ import java.util.*;
 @Service
 @Log4j2
 public class UserServiceImpl implements UserService {
-    private Map<String, User> sessionMap = new HashMap<>();
+    private final Map<String, User> sessionMap = new HashMap<>();
 
     @Override
     public Set<String> getUserSessions(String username) {
@@ -46,7 +46,7 @@ public class UserServiceImpl implements UserService {
     public String addUser(User user) {
         if(sessionMap.containsKey(user.getName())){
             User existedUser = sessionMap.get(user.getName());
-            user.getOpenSessions().stream().forEach(existedUser.getOpenSessions()::add);
+            user.getOpenSessions().forEach(existedUser.getOpenSessions()::add);
             return existedUser.getId();
         } else{
             this.sessionMap.put(user.getName(), user);
